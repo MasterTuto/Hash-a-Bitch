@@ -2,8 +2,6 @@
 import requests
 import platform
 from os import system
-from socket import setdefaulttimeout
-_TIME_OUT = setdefaulttimeout(10.0)
 
 try:
     import google
