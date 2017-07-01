@@ -646,7 +646,7 @@ Accepted algorithms are:
 ------------------------
 
   MD5       - RFC 1321
-  SHA1      - RFC 3174 (FIPS 180-3) (Not for now)
+  SHA1      - RFC 3174 (FIPS 180-3) (Not yet)
  
 
 
