@@ -528,6 +528,7 @@ class CLAVEY:
 		
 		response = requests.get(url)
 		html = response.text
+		if "404 : PAGE NOT FOUND" in html: return None
 
 		soup = BeautifulSoup(html, 'html.parser')
 		divs = soup.find_all('div', {'class': 'ver'})
@@ -742,13 +743,16 @@ def crackHash (algorithm, hashvalue=None, hashfile=None):
 				if h.hexdigest() == activehash:
 					hashresults.append (result)
 					cracked = 2
-			
+				else:
+					print "\033[31mHASH NOT FOUND AT %s (%s)\n\033[0;0m" % (cr.name, cr.url)
+			else:
+					print "\033[31mHASH NOT FOUND AT %s (%s)\n\033[0;0m" % (cr.name, cr.url)
 			# Had the hash cracked?
 			if cracked:
-				print "\033[32m\n***** HASH CRACKED!! *****\nThe original string is: %s\n\033[0;0m" % (result)
+				print "\033[32m\n***** HASH CRACKED!! *****\nThe original string is: \033[33m%s\n\033[0;0m" % (result)
 				# If result was verified, break
 				if cracked == 2:
-					break
+					exit()
 		
 		
 		
