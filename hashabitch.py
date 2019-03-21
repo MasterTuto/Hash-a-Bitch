@@ -1,10 +1,12 @@
-# -*- coding: utf-8 -*-
-import requests
+﻿# -*- coding: utf-8 -*-
 import platform
+import sys
 from os import system
+import os.path
+import hashfunctions
 
 try:
-    import google
+    from googlesearch import search
 except ImportError:
     print 'ImportError: google module not found. Try this "pip install google" or "apt-get install google"'
     if platform.system() == "Windows":
@@ -18,7 +20,7 @@ if platform.system() == "Windows":
 else:
     system('clear')
 
-print """$$\   $$\                     $$\                             $$\       $$\   $$\     v1.0      $$\\
+print """$$\   $$\                     $$\                             $$\       $$\   $$\     v2.0      $$\\
 $$ |  $$ |                    $$ |                            $$ |      \__|  $$ |              $$ |
 $$ |  $$ | $$$$$$\   $$$$$$$\ $$$$$$$\         $$$$$$\        $$$$$$$\  $$\ $$$$$$\    $$$$$$$\ $$$$$$$\\
 $$$$$$$$ | \____$$\ $$  _____|$$  __$$\        \____$$\       $$  __$$\ $$ |\_$$  _|  $$  _____|$$  __$$\\
@@ -28,72 +30,73 @@ $$ |  $$ |\$$$$$$$ |$$$$$$$  |$$ |  $$ |      \$$$$$$$ |      $$$$$$$  |$$ |  \$
 \__|  \__| \_______|\_______/ \__|  \__|       \_______|      \_______/ \__|   \____/  \_______|\__|  \__|
                                                                              coded by Super23 (aka Lord13)
 """
-md5hash = raw_input("MD5 Hash>>")
-while len(md5hash) != 32:
-    md5hash = raw_input("MD5 Hash>>")
-print("")
 
-headers = {
-    'User-Agent': 'Mozilla/5.0'
-}
+def show_help():
+    print('searches for the given hash value in some online services\n\n'
+          'USAGE:\n'
+          '    {what_calld_me} HASHFUNCTION checksum\n\n'
+          'OPTIONS:\n'
+          '    HASHFUNCION  indicates the type of the checksum\n'
+          '    checksum     the checksum itself\n\n'
+          'ACCEPTED HASH FUNCTIONS:\n'
+          '    MD5          most commom hashing function'
+          ''.format(what_calld_me=os.path.basename(sys.argv[0])))
+    sys.exit(1)
 
-claveycontrasena = requests.get('http://descodificar.claveycontraseña.es/'+md5hash+'.html', headers=headers).text
-md5decoder = requests.get('http://md5decoder.org/'+md5hash, headers=headers).text
-gromweb = requests.get('http://md5.gromweb.com/?md5='+md5hash, headers=headers).text
+def code_error():
+    if len(sys.argv) >= 3:
+            hashtype = sys.argv[1]
+            checksum = sys.argv[2]
 
-try:
-    if 'showkey' in claveycontrasena:
-        i = 1
-        k = 'a'
-        while k[-1] != ')':
-            k = claveycontrasena[claveycontrasena.index('showkey'):claveycontrasena.index('showkey')+len('showkey')+i]
-            i += 1
-        print 'claveycontrasena.es:', k.split('\'')[1]
+            if hashtype not in hashfunctions.supported_functions:
+                return 1
+
+            checksum_instance = hashfunctions.supported_functions[hashtype](checksum)
+
+            if not checksum_instance.check():
+                return 2
     else:
-        print "claveycontrasena.es: not found"
-except:
-    print "claveycontrasena.es: ERROR WHILE CONNECTING"
+        return 3
+    
+    return False
 
-try:
-    if 'md2' in md5decoder:
-        i = 1
-        k = 'a'
-        while k[-1] != ')':
-            k = md5decoder[md5decoder.index('md2'):md5decoder.index('md2')+len('md2')+i]
-            i += 1
-        print 'md5decoder.org:', k
-    else:
-        print 'md5decoder.org: not found'
-except:
-    print "ERROR WHILE CONNECTING"
 
-try:
-    if 'content string"' in gromweb:
-        i = 1
-        k = 'a'
-        while k[-1] != '<':
-            k = gromweb[gromweb.index('content string"'):gromweb.index('content string"')+len('content string"')+i]
-            i += 1
-        print 'gromweb.com:', k.split('>')[1].strip('<')
-    else:
-        print 'gromweb.com: not found'
-except:
-    print "ERROR WHILE CONNECTING"
+def main():
+    code_errors = {
+        1: '[!] FUNCTION NOT SUPPORTED YET',
+        2: '[!] INVALID CHECKSUM',
+        3: "[!] TOO FEW ARGUMENTS"
+    }
 
-try:
-    for url in google.search(md5hash, stop=5):
-        if 'md5decrypt.org' in url:
-            md5decrypt = requests.get(url, headers=headers).text
-            if 'style=\'color:red;\'>' in md5decrypt:
-                i = 1
-                k = 'a'
-                while k[-1] != '<':
-                    k = md5decrypt[md5decrypt.index('style=\'color:red;\'>'):md5decrypt.index('style=\'color:red;\'>')
-                                   + len('style=\'color:red;\'>') + i]
-                    i += 1
-                print 'md5decrypt.com:', k.split('>')[1].strip('<')
-            else:
-                print 'md5decrypt.com: not found'
-except ImportError:
-    print 'md5decrypt: ERROR'
-input('Press any button to continue...')
+    code_error_ = something_went_wrong = code_error()
+
+    if something_went_wrong:
+        print (code_errors[code_error_])
+        show_help()
+
+
+    hashtype = sys.argv[1]
+    checksum = sys.argv[2]
+
+    print("[*] Identified function: " + hashtype)
+    print("[*] Identified checksum: " + checksum)
+    print('\n'+"==="*20)
+
+    supported_functions = hashfunctions.supported_functions
+
+    print("[?] SEARCHING FOR YOUR CHECKSUM...")
+    decrypted_hash = supported_functions[hashtype](checksum).decrypt()
+
+    print('\n'+"==="*20)
+
+    for website, found_original in decrypted_hash.items():
+        if found_original:
+            print("[+] Found on {website}: {original}".format(website=website, original=found_original))
+
+
+if __name__ == '__main__':
+    main()
+
+
+
+#input('Press any button to continue...')
