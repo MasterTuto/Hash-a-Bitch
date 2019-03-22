@@ -1,6 +1,8 @@
 #coding: utf-8
+from bs4 import NavigableString
+from bs4 import BeautifulSoup
 import requests
-from hashlib import *
+import hashlib
 import re
 
 class MD5():
@@ -9,22 +11,23 @@ class MD5():
         }
 
         def check(self):
-            return re.match(r"[A-Za-z\d]{32}", self.checksum)
+            return re.match(r"[A-Fa-f\d]{32}", self.checksum)
 
         def __init__(self, checksum):
             self.checksum = checksum
 
             self.claveycontrasena_url = 'http://descodificar.claveycontraseña.es/'+self.checksum+'.html'
-            self.md5decoder_url = 'http://md5decoder.org/'+self.checksum
-            self.gromweb_url = 'https://md5.gromweb.com/?md5='+self.checksum
+            self.md5decoder_url       = 'http://md5decoder.org/'+self.checksum
+            self.gromweb_url          = 'https://md5.gromweb.com/?md5='+self.checksum
+            self.md5decrypt_url       = 'https://md5decrypt.net/en/'
 
 
-        def decrypt(self):
+        def decrypt(self, search_many=False):
             sites_to_get_from = [
                 self.get_from_claveylacontrasena,
+                self.get_from_md5decrypt,
                 self.get_from_md5decoder,
                 self.get_from_gromweb
-                #self.get_from_md5decrypt
             ]
 
             results = {}
@@ -35,8 +38,12 @@ class MD5():
                 if decryption_result:
                     results[decryption_result[0]] = decryption_result[1]
 
-            return results
+                    if search_many:
+                        continue
+                    else:
+                        break
 
+            return results
 
         def get_from_claveylacontrasena(self):
             try:
@@ -83,21 +90,38 @@ class MD5():
             
         def get_from_md5decrypt(self):
             try:
-                for url in search(self.checksum, stop=5):
-                    if 'md5decrypt.org' in url:
-                        md5decrypt = requests.get(url, headers=self.headers).text
-                        if 'style=\'color:red;\'>' in md5decrypt:
-                            i = 1
-                            k = 'a'
-                            while k[-1] != '<':
-                                k = md5decrypt[md5decrypt.index('style=\'color:red;\'>'):md5decrypt.index('style=\'color:red;\'>')
-                                               + len('style=\'color:red;\'>') + i]
-                                i += 1
-                            return 'md5decrypt.com:', k.split('>')[1].strip('<')
-                        else:
-                            return False # 'md5decrypt.com: not found'
-            except ImportError:
-                return False#'md5decrypt: ERROR'
+                md5decrypt_session = requests.Session()
+                md5decrypt_session.headers.update(self.headers)
+
+                md5decrypt_get = md5decrypt_session.get(self.md5decrypt_url).text
+
+                rootSoup = BeautifulSoup(md5decrypt_get, 'lxml')
+
+                formData = {
+                    "decrypt": "Decrypt",
+                    "hash": self.checksum
+                }
+
+                for child in rootSoup.find('form').children:
+                    if isinstance(child, NavigableString): continue
+                    dont_names = ['crypt', 'decrypt', 'hash']
+                    name = child.get('name')
+
+                    if name:
+                        if name in dont_names: continue
+                        
+                        value = child.get("value")
+                        if value:
+                            formData[name] = value
+
+                md5decrypt_post = md5decrypt_session.post(self.md5decrypt_url, data=formData).text
+
+                original = md5decrypt_post.split(self.checksum + " : <b>")[1].split('</b>')[0]
+
+                return 'md5decrypt', original
+
+            except:
+                return False
 
 class SHA1():
     def __init__(self, checksum):
@@ -124,8 +148,14 @@ supported_functions = {
 }
 
 def verify_checksum(original, checksum, function):
+    if function not in hashlib.algorithms_available:
+        return False
+
     try:
-        if function(original) == checksum:
+        hashed_original = hashlib.new(function)
+        hashed_original.update(original)
+        
+        if hashed_original.hexdigest() == checksum:
             return True
         else:
             return False

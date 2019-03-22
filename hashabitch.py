@@ -36,6 +36,7 @@ def show_help():
           'USAGE:\n'
           '    {what_calld_me} HASHFUNCTION checksum\n\n'
           'OPTIONS:\n'
+          '    --help'
           '    HASHFUNCION  indicates the type of the checksum\n'
           '    checksum     the checksum itself\n\n'
           'ACCEPTED HASH FUNCTIONS:\n'
@@ -44,18 +45,21 @@ def show_help():
     sys.exit(1)
 
 def code_error():
-    if len(sys.argv) >= 3:
-            hashtype = sys.argv[1]
-            checksum = sys.argv[2]
+    try:
+        hashtype = sys.argv[1]
+        checksum = sys.argv[2]
+    except IndexError:
+        return 1
 
-            if hashtype not in hashfunctions.supported_functions:
-                return 1
+    if hashtype == '--help':
+        show_help()
 
-            checksum_instance = hashfunctions.supported_functions[hashtype](checksum)
+    if hashtype not in hashfunctions.supported_functions:
+        return 2
 
-            if not checksum_instance.check():
-                return 2
-    else:
+    checksum_instance = hashfunctions.supported_functions[hashtype](checksum)
+
+    if not checksum_instance.check():
         return 3
     
     return False
@@ -63,9 +67,9 @@ def code_error():
 
 def main():
     code_errors = {
-        1: '[!] FUNCTION NOT SUPPORTED YET',
-        2: '[!] INVALID CHECKSUM',
-        3: "[!] TOO FEW ARGUMENTS"
+        1: "[!] TOO FEW ARGUMENTS",
+        2: '[!] FUNCTION NOT SUPPORTED YET',
+        3: '[!] INVALID CHECKSUM'
     }
 
     code_error_ = something_went_wrong = code_error()
@@ -96,7 +100,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-
-#input('Press any button to continue...')
